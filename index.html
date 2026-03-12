@@ -1,0 +1,738 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <!-- viewport-fit=cover lets content reach iPhone notch/home-bar edges -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <!-- Add-to-homescreen meta -->
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>ArithmoQuest</title>
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600;700&family=Rajdhani:wght@500;600;700&family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,700;1,9..40,400&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+
+    <style>
+    .math-symbol {
+        position: fixed; font-family: 'IBM Plex Mono', monospace; font-weight: 700;
+        pointer-events: none; z-index: 499; opacity: 0; animation: rise linear infinite;
+    }
+    @keyframes rise {
+        0%   { transform: translateY(110vh); opacity: 0; }
+        8%   { opacity: 1; } 90% { opacity: 1; }
+        100% { transform: translateY(-10vh); opacity: 0; }
+    }
+    .seq-symbol {
+        position: fixed; font-family: 'IBM Plex Mono', monospace; font-weight: 700;
+        pointer-events: none; z-index: 499; opacity: 0; white-space: nowrap;
+        animation: seqRise linear infinite;
+    }
+    @keyframes seqRise {
+        0%   { transform: translateY(110vh); opacity: 0; }
+        6%   { opacity: 1; } 88% { opacity: 1; }
+        100% { transform: translateY(-10vh); opacity: 0; }
+    }
+    </style>
+</head>
+<body x-data="gameApp()" x-init="init()" class="flex flex-col h-screen overflow-hidden">
+
+<audio id="bgMusic" loop preload="auto" src="Back_On_Track.mp3"></audio>
+
+<!-- FLOATING BG (hidden on mobile via CSS) -->
+<span class="seq-symbol" style="left:2%;font-size:0.85rem;animation-duration:16s;animation-delay:0s;color:rgba(124,106,247,0.55);">1, 2, 3, ?</span>
+<span class="seq-symbol" style="left:10%;font-size:1.0rem;animation-duration:20s;animation-delay:-6s;color:rgba(240,180,41,0.50);">5, 10, 15, ?</span>
+<span class="seq-symbol" style="left:20%;font-size:0.9rem;animation-duration:14s;animation-delay:-12s;color:rgba(99,179,237,0.50);">2, 4, 6, ?</span>
+<span class="seq-symbol" style="left:30%;font-size:1.1rem;animation-duration:18s;animation-delay:-3s;color:rgba(104,211,145,0.45);">3, 6, 9, ?</span>
+<span class="seq-symbol" style="left:40%;font-size:0.85rem;animation-duration:22s;animation-delay:-9s;color:rgba(124,106,247,0.50);">10, 20, 30, ?</span>
+<span class="seq-symbol" style="left:50%;font-size:1.0rem;animation-duration:15s;animation-delay:-15s;color:rgba(240,180,41,0.55);">4, 8, 12, ?</span>
+<span class="seq-symbol" style="left:60%;font-size:0.9rem;animation-duration:17s;animation-delay:-5s;color:rgba(99,179,237,0.45);">7, 14, 21, ?</span>
+<span class="seq-symbol" style="left:70%;font-size:1.1rem;animation-duration:21s;animation-delay:-18s;color:rgba(124,106,247,0.45);">6, 12, 18, ?</span>
+<span class="seq-symbol" style="left:80%;font-size:0.85rem;animation-duration:13s;animation-delay:-8s;color:rgba(104,211,145,0.50);">9, 18, 27, ?</span>
+<span class="seq-symbol" style="left:90%;font-size:1.0rem;animation-duration:19s;animation-delay:-2s;color:rgba(240,180,41,0.45);">11, 22, 33, ?</span>
+<span class="seq-symbol" style="left:5%;font-size:0.9rem;animation-duration:16s;animation-delay:-14s;color:rgba(99,179,237,0.55);">8, 16, 24, ?</span>
+<span class="seq-symbol" style="left:15%;font-size:1.1rem;animation-duration:23s;animation-delay:-7s;color:rgba(124,106,247,0.55);">15, 30, 45, ?</span>
+<span class="seq-symbol" style="left:25%;font-size:0.85rem;animation-duration:18s;animation-delay:-11s;color:rgba(240,180,41,0.50);">3, 9, 27, ?</span>
+<span class="seq-symbol" style="left:35%;font-size:0.9rem;animation-duration:20s;animation-delay:-4s;color:rgba(104,211,145,0.45);">5, 25, 125, ?</span>
+<span class="seq-symbol" style="left:45%;font-size:1.0rem;animation-duration:15s;animation-delay:-17s;color:rgba(99,179,237,0.50);">2, 6, 18, ?</span>
+<span class="seq-symbol" style="left:55%;font-size:1.1rem;animation-duration:22s;animation-delay:-10s;color:rgba(124,106,247,0.50);">1, 4, 9, ?</span>
+<span class="seq-symbol" style="left:65%;font-size:0.85rem;animation-duration:17s;animation-delay:-1s;color:rgba(240,180,41,0.55);">12, 24, 36, ?</span>
+<span class="seq-symbol" style="left:75%;font-size:0.9rem;animation-duration:14s;animation-delay:-13s;color:rgba(104,211,145,0.55);">20, 40, 60, ?</span>
+<span class="seq-symbol" style="left:85%;font-size:1.0rem;animation-duration:21s;animation-delay:-6s;color:rgba(99,179,237,0.45);">7, 21, 63, ?</span>
+<span class="seq-symbol" style="left:95%;font-size:0.85rem;animation-duration:19s;animation-delay:-16s;color:rgba(124,106,247,0.45);">50, 100, 150, ?</span>
+<span class="math-symbol" style="left:3%;font-size:1.1rem;animation-duration:14s;animation-delay:0s;color:rgba(124,106,247,0.55);">1</span>
+<span class="math-symbol" style="left:8%;font-size:1.6rem;animation-duration:18s;animation-delay:-4s;color:rgba(240,180,41,0.50);">+</span>
+<span class="math-symbol" style="left:15%;font-size:2.0rem;animation-duration:12s;animation-delay:-8s;color:rgba(124,106,247,0.45);">?</span>
+<span class="math-symbol" style="left:22%;font-size:1.0rem;animation-duration:20s;animation-delay:-2s;color:rgba(99,179,237,0.45);">2</span>
+<span class="math-symbol" style="left:30%;font-size:1.8rem;animation-duration:15s;animation-delay:-11s;color:rgba(240,180,41,0.55);">=</span>
+<span class="math-symbol" style="left:38%;font-size:1.2rem;animation-duration:17s;animation-delay:-6s;color:rgba(104,211,145,0.45);">9</span>
+<span class="math-symbol" style="left:45%;font-size:2.2rem;animation-duration:13s;animation-delay:-13s;color:rgba(124,106,247,0.50);">×</span>
+<span class="math-symbol" style="left:52%;font-size:1.0rem;animation-duration:19s;animation-delay:-1s;color:rgba(240,180,41,0.45);">3</span>
+<span class="math-symbol" style="left:60%;font-size:1.5rem;animation-duration:16s;animation-delay:-9s;color:rgba(99,179,237,0.50);">÷</span>
+<span class="math-symbol" style="left:67%;font-size:1.3rem;animation-duration:11s;animation-delay:-5s;color:rgba(124,106,247,0.55);">7</span>
+<span class="math-symbol" style="left:74%;font-size:1.9rem;animation-duration:22s;animation-delay:-15s;color:rgba(240,180,41,0.50);">−</span>
+<span class="math-symbol" style="left:81%;font-size:1.1rem;animation-duration:14s;animation-delay:-3s;color:rgba(104,211,145,0.45);">4</span>
+<span class="math-symbol" style="left:87%;font-size:2.0rem;animation-duration:18s;animation-delay:-10s;color:rgba(124,106,247,0.45);">∑</span>
+<span class="math-symbol" style="left:93%;font-size:1.4rem;animation-duration:15s;animation-delay:-7s;color:rgba(99,179,237,0.55);">√</span>
+<span class="math-symbol" style="left:5%;font-size:1.7rem;animation-duration:20s;animation-delay:-16s;color:rgba(240,180,41,0.45);">π</span>
+<span class="math-symbol" style="left:18%;font-size:1.0rem;animation-duration:13s;animation-delay:-12s;color:rgba(124,106,247,0.50);">∞</span>
+<span class="math-symbol" style="left:35%;font-size:2.4rem;animation-duration:24s;animation-delay:-2s;color:rgba(240,180,41,0.40);">5</span>
+<span class="math-symbol" style="left:56%;font-size:1.2rem;animation-duration:16s;animation-delay:-14s;color:rgba(104,211,145,0.50);">8</span>
+<span class="math-symbol" style="left:70%;font-size:1.8rem;animation-duration:21s;animation-delay:-8s;color:rgba(99,179,237,0.45);">6</span>
+<span class="math-symbol" style="left:89%;font-size:1.3rem;animation-duration:12s;animation-delay:-17s;color:rgba(124,106,247,0.55);">0</span>
+<span class="math-symbol" style="left:12%;font-size:1.6rem;animation-duration:17s;animation-delay:-6s;color:rgba(240,180,41,0.45);">²</span>
+<span class="math-symbol" style="left:48%;font-size:1.0rem;animation-duration:19s;animation-delay:-19s;color:rgba(104,211,145,0.40);">≠</span>
+<span class="math-symbol" style="left:77%;font-size:2.0rem;animation-duration:23s;animation-delay:-11s;color:rgba(124,106,247,0.45);">∫</span>
+<span class="math-symbol" style="left:96%;font-size:1.4rem;animation-duration:15s;animation-delay:-4s;color:rgba(99,179,237,0.50);">Δ</span>
+
+<!-- LOADING SCREEN -->
+<div x-show="loadingGame" x-cloak class="fixed inset-0 bg-black/50 z-[9999] flex items-center justify-center">
+    <div class="loading-box">
+        <h2 class="loading-text">Loading...</h2>
+        <div class="loading-bar"><div class="loading-fill"></div></div>
+    </div>
+</div>
+
+<!-- NOTIFICATION -->
+<div x-show="notification"
+     x-transition:enter="transition ease-out duration-300"
+     x-transition:enter-start="opacity-0 -translate-y-full"
+     x-transition:enter-end="opacity-100 translate-y-5"
+     x-transition:leave="transition ease-in duration-300"
+     x-transition:leave-start="opacity-100 translate-y-5"
+     x-transition:leave-end="opacity-0 -translate-y-full"
+     x-cloak
+     class="fixed top-0 left-1/2 -translate-x-1/2 z-[2000] mt-2 px-5 py-3 rounded-xl border shadow-2xl flex items-center gap-3 font-medium text-sm max-w-[90vw]"
+     :class="notification?.type === 'success' ? 'bg-green-500/10 border-green-500/50 text-green-400' : 'bg-red-500/10 border-red-500/50 text-red-400'">
+    <i :data-lucide="notification?.type === 'success' ? 'check-circle-2' : 'alert-circle'" class="w-5 h-5 shrink-0"></i>
+    <span x-text="notification?.message"></span>
+</div>
+
+<!-- MUSIC TOGGLE (login/reg screens) -->
+<div x-show="screen === 'login' || screen === 'reg'" x-cloak
+     class="fixed top-4 right-4 z-[3000] flex items-center gap-2"
+     style="top: max(1rem, env(safe-area-inset-top, 1rem)); right: max(1rem, env(safe-area-inset-right, 1rem));">
+    <span class="text-[10px] font-mono text-gray-500 uppercase tracking-widest hidden sm:inline" x-text="musicOn ? 'Music ON' : 'Music OFF'"></span>
+    <button @click="toggleMusic()"
+            class="w-12 h-6 rounded-full relative transition-all focus:outline-none border"
+            :class="musicOn ? 'bg-[#7c6af7] border-[#7c6af7]' : 'bg-[#21262d] border-[#21262d]'">
+        <div class="absolute top-1 w-4 h-4 bg-white rounded-full shadow-md transition-all"
+             :style="musicOn ? 'left: 24px' : 'left: 4px'"></div>
+    </button>
+    <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 transition-colors"
+         :class="musicOn ? 'text-[#7c6af7]' : 'text-gray-600'"
+         viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/>
+    </svg>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!-- AUTH SCREENS                                                     -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<div x-show="screen === 'reg' || screen === 'login'"
+     class="auth-wrapper flex-1 flex items-center justify-center p-5 h-full overflow-y-auto">
+    <div class="auth-card w-full max-w-md glass p-8 rounded-3xl shadow-2xl relative" x-transition>
+        <div class="absolute top-0 left-1/4 right-1/4 h-px bg-gradient-to-r from-transparent via-[#7c6af7] to-transparent"></div>
+        <p class="text-center font-mono text-[10px] text-gray-500 tracking-[0.3em] uppercase mb-2">ArithmoQuest</p>
+        <h2 class="text-center font-display text-3xl font-bold mb-8 tracking-wider uppercase"
+            x-text="screen === 'reg' ? 'Create Account' : 'Welcome Back'"></h2>
+
+        <div class="space-y-4">
+            <div class="bg-[#1c2230] border border-[#21262d] rounded-xl p-3 flex items-center gap-3 focus-within:border-[#7c6af7] transition-all">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-gray-500 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                <input x-model="authForm.u" type="text" placeholder="Username" autocomplete="username"
+                       @keydown.enter="handleAuth()"
+                       class="bg-transparent outline-none flex-1 font-medium" style="font-size:16px;">
+            </div>
+            <div class="bg-[#1c2230] border border-[#21262d] rounded-xl p-3 flex items-center gap-3 focus-within:border-[#7c6af7] transition-all">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-gray-500 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                <input x-model="authForm.p" :type="showPassword ? 'text' : 'password'" placeholder="Password"
+                       autocomplete="current-password" @keydown.enter="handleAuth()"
+                       class="bg-transparent outline-none flex-1 font-medium" style="font-size:16px;">
+                <button type="button" @click="showPassword = !showPassword" class="text-gray-500 hover:text-gray-300 shrink-0 p-1">
+                    <span x-show="!showPassword"><svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></span>
+                    <span x-show="showPassword"><svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></svg></span>
+                </button>
+            </div>
+            <div x-show="screen === 'reg'" x-transition class="bg-[#1c2230] border border-[#21262d] rounded-xl p-3 flex items-center gap-3 focus-within:border-[#7c6af7] transition-all">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-gray-500 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                <input x-model="authForm.cp" :type="showConfirmPassword ? 'text' : 'password'" placeholder="Confirm Password"
+                       autocomplete="new-password" @keydown.enter="handleAuth()"
+                       class="bg-transparent outline-none flex-1 font-medium" style="font-size:16px;">
+                <button type="button" @click="showConfirmPassword = !showConfirmPassword" class="text-gray-500 hover:text-gray-300 shrink-0 p-1">
+                    <svg x-show="!showConfirmPassword" xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                    <svg x-show="showConfirmPassword" xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+                </button>
+            </div>
+            <button @click="handleAuth()"
+                    class="w-full bg-[#7c6af7] hover:bg-[#9d8ff9] text-white py-4 rounded-xl font-display font-bold tracking-widest shadow-lg shadow-[#7c6af7]/20 transition-all active:scale-95"
+                    x-text="screen === 'reg' ? 'REGISTER' : 'LOG IN'"></button>
+        </div>
+
+        <p class="text-center mt-6 text-sm text-gray-400">
+            <span x-text="screen === 'reg' ? 'Already have an account?' : 'No account yet?'"></span>
+            <button @click="screen = (screen === 'reg' ? 'login' : 'reg'); showPassword = false; authForm.cp = ''"
+                    class="text-[#7c6af7] font-bold ml-1"
+                    x-text="screen === 'reg' ? 'Log in' : 'Register'"></button>
+        </p>
+    </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!-- LOBBY                                                            -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<div x-show="screen === 'lobby'" x-cloak class="lobby-wrapper flex h-screen w-full overflow-hidden">
+
+    <!-- DESKTOP SIDEBAR (hidden on mobile via CSS) -->
+    <aside class="desktop-sidebar w-64 bg-[#161b22] border-r border-[#21262d] flex flex-col h-full shrink-0">
+        <div class="p-6 border-b border-[#21262d]">
+            <h1 class="font-display text-2xl font-bold tracking-widest text-[#7c6af7]">ARITHMO<br>QUEST</h1>
+            <p class="font-mono text-[10px] text-gray-500 tracking-[0.2em] mt-1 uppercase">Math Challenge</p>
+        </div>
+
+        <div class="p-4 border-b border-[#21262d] flex items-center gap-3">
+            <div class="w-10 h-10 rounded-xl flex items-center justify-center font-mono font-bold text-white shadow-lg"
+                 :class="currentUser?.avatar ? '' : 'bg-gradient-to-br from-[#7c6af7] to-indigo-600'">
+                <template x-if="currentUser?.avatar"><img :src="currentUser.avatar" class="w-10 h-10 rounded-xl object-cover"></template>
+                <template x-if="!currentUser?.avatar"><span x-text="currentUser?.username.slice(0,2).toUpperCase()"></span></template>
+            </div>
+            <div>
+                <p class="font-bold text-sm" x-text="currentUser?.username"></p>
+                <p class="text-[10px] text-green-500 font-mono">ONLINE</p>
+            </div>
+        </div>
+
+        <nav class="flex-1 p-2 space-y-1 overflow-y-auto custom-scrollbar">
+            <p class="px-4 py-2 text-[10px] font-mono text-gray-500 uppercase tracking-widest">Menu</p>
+            <button @click="setPanel('home')"        :class="panel==='home'        ? 'bg-[#7c6af7]/10 text-[#7c6af7] border border-[#7c6af7]/20' : 'text-gray-400 hover:bg-[#1c2230] hover:text-white'" class="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm transition-all"><i data-lucide="home"      class="w-4 h-4"></i> Home</button>
+            <button @click="setPanel('profile')"     :class="panel==='profile'     ? 'bg-[#7c6af7]/10 text-[#7c6af7] border border-[#7c6af7]/20' : 'text-gray-400 hover:bg-[#1c2230] hover:text-white'" class="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm transition-all"><i data-lucide="user"      class="w-4 h-4"></i> Profile</button>
+            <p class="px-4 py-2 mt-4 text-[10px] font-mono text-gray-500 uppercase tracking-widest">Game</p>
+            <button @click="setPanel('leaderboard')" :class="panel==='leaderboard' ? 'bg-[#7c6af7]/10 text-[#7c6af7] border border-[#7c6af7]/20' : 'text-gray-400 hover:bg-[#1c2230] hover:text-white'" class="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm transition-all"><i data-lucide="trophy"    class="w-4 h-4"></i> Leaderboard</button>
+            <button @click="setPanel('history')"     :class="panel==='history'     ? 'bg-[#7c6af7]/10 text-[#7c6af7] border border-[#7c6af7]/20' : 'text-gray-400 hover:bg-[#1c2230] hover:text-white'" class="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm transition-all"><i data-lucide="history"   class="w-4 h-4"></i> History</button>
+            <p class="px-4 py-2 mt-4 text-[10px] font-mono text-gray-500 uppercase tracking-widest">System</p>
+            <button @click="setPanel('settings')"    :class="panel==='settings'    ? 'bg-[#7c6af7]/10 text-[#7c6af7] border border-[#7c6af7]/20' : 'text-gray-400 hover:bg-[#1c2230] hover:text-white'" class="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm transition-all"><i data-lucide="settings"  class="w-4 h-4"></i> Settings</button>
+            <button @click="setPanel('credits')"     :class="panel==='credits'     ? 'bg-[#7c6af7]/10 text-[#7c6af7] border border-[#7c6af7]/20' : 'text-gray-400 hover:bg-[#1c2230] hover:text-white'" class="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm transition-all"><i data-lucide="info"      class="w-4 h-4"></i> Credits</button>
+        </nav>
+
+        <div class="p-4 border-t border-[#21262d]">
+            <button @click="showLogoutModal = true; refreshIcons()" class="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-red-500/10 text-red-500 border border-red-500/20 hover:bg-red-500/20 transition-all font-display font-bold text-xs tracking-widest">
+                <i data-lucide="log-out" class="w-4 h-4"></i> LOG OUT
+            </button>
+        </div>
+    </aside>
+
+    <!-- MAIN CONTENT -->
+    <main class="lobby-main flex-1 overflow-y-auto p-8 bg-[#0d1117] custom-scrollbar">
+
+        <!-- ── HOME PANEL ───────────────────────────────────────── -->
+        <div x-show="panel === 'home'" x-transition class="space-y-8">
+            <header>
+                <h2 class="font-display text-3xl font-bold tracking-tight">Dashboard</h2>
+                <p class="text-gray-500 text-sm mt-1">Ready to test your arithmetic skills?</p>
+            </header>
+
+            <!-- Start game hero -->
+            <div class="game-hero bg-gradient-to-br from-[#7c6af7]/20 to-indigo-600/10 border border-[#7c6af7]/30 rounded-3xl p-8 flex items-center justify-between relative overflow-hidden group">
+                <div class="relative z-10">
+                    <h3 class="font-display text-2xl font-bold mb-2">Start a New Game</h3>
+                    <p class="text-gray-500 text-sm max-w-xs">Pick your difficulty and climb the prize ladder to the top.</p>
+                </div>
+                <div class="diff-buttons flex gap-4 relative z-10">
+                    <button @click="startNewGame('easy')"   class="bg-green-500/20 hover:bg-green-500/30 text-green-400 border border-green-500/30 px-6 py-3 rounded-xl font-display font-bold tracking-widest transition-all active:scale-95">EASY</button>
+                    <button @click="startNewGame('medium')" class="bg-[#f0b429]/20 hover:bg-[#f0b429]/30 text-[#f0b429] border border-[#f0b429]/30 px-6 py-3 rounded-xl font-display font-bold tracking-widest transition-all active:scale-95">MED</button>
+                    <button @click="startNewGame('hard')"   class="bg-red-500/20 hover:bg-red-500/30 text-red-400 border border-red-500/30 px-6 py-3 rounded-xl font-display font-bold tracking-widest transition-all active:scale-95">HARD</button>
+                </div>
+                <div class="absolute -right-10 -bottom-10 w-40 h-40 bg-[#7c6af7]/10 rounded-full blur-3xl group-hover:bg-[#7c6af7]/20 transition-all"></div>
+            </div>
+
+            <!-- Stats -->
+            <div class="stat-grid grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div class="glass p-6 rounded-2xl">
+                    <p class="font-mono text-[10px] text-gray-500 uppercase tracking-widest mb-2">Best Prize</p>
+                    <p class="font-display text-3xl font-bold text-[#f0b429]" x-text="'🏆 ' + (currentUser?.bestScore || 0)"></p>
+                </div>
+                <div class="glass p-6 rounded-2xl">
+                    <p class="font-mono text-[10px] text-gray-500 uppercase tracking-widest mb-2">Games Played</p>
+                    <p class="font-display text-3xl font-bold text-[#7c6af7]" x-text="currentUser?.history?.length || 0"></p>
+                </div>
+                <div class="glass p-6 rounded-2xl">
+                    <p class="font-mono text-[10px] text-gray-500 uppercase tracking-widest mb-2">Fave Mode</p>
+                    <p class="font-display text-3xl font-bold uppercase" x-text="getFaveMode()"></p>
+                </div>
+            </div>
+
+            <!-- Recent activity -->
+            <section>
+                <div class="flex items-center gap-4 mb-4">
+                    <h3 class="font-mono text-[10px] text-gray-500 uppercase tracking-[0.3em]">Recent Activity</h3>
+                    <div class="flex-1 h-px bg-[#21262d]"></div>
+                </div>
+                <div class="space-y-3">
+                    <template x-for="(h, i) in (currentUser?.history || []).slice(-3).reverse()" :key="i">
+                        <div class="glass p-4 rounded-xl flex items-center justify-between group hover:border-[#21262d]/80 transition-all">
+                            <div class="flex items-center gap-4">
+                                <span class="px-2 py-1 rounded-md text-[10px] font-bold tracking-widest uppercase border"
+                                      :class="h.difficulty === 'easy' ? 'bg-green-500/10 text-green-400 border-green-500/30' : h.difficulty === 'medium' ? 'bg-[#f0b429]/10 text-[#f0b429] border-[#f0b429]/30' : 'bg-red-500/10 text-red-400 border-red-500/30'"
+                                      x-text="h.difficulty"></span>
+                                <div>
+                                    <p class="font-bold text-sm" x-text="'Round ' + h.step"></p>
+                                    <p class="text-[10px] text-gray-500 font-mono" x-text="h.date"></p>
+                                </div>
+                            </div>
+                            <p class="font-mono font-bold text-[#f0b429]" x-text="'+' + h.prize"></p>
+                        </div>
+                    </template>
+                    <template x-if="!currentUser?.history?.length">
+                        <p class="text-center text-gray-500 py-8 font-mono text-xs italic">No games yet. Hit Play to start!</p>
+                    </template>
+                </div>
+            </section>
+        </div>
+
+        <!-- ── PROFILE PANEL ──────────────────────────────────────── -->
+        <div x-show="panel === 'profile'" x-transition class="space-y-8">
+            <header>
+                <h2 class="font-display text-3xl font-bold tracking-tight">Player Profile</h2>
+                <p class="text-gray-500 text-sm mt-1">Your personal stats and breakdown</p>
+            </header>
+
+            <div class="profile-hero bg-gradient-to-br from-[#7c6af7]/10 to-indigo-600/5 border border-[#7c6af7]/20 rounded-3xl p-8 flex items-center gap-8">
+                <div class="w-24 h-24 rounded-3xl flex items-center justify-center text-4xl font-mono font-bold shadow-2xl shrink-0"
+                     :class="currentUser?.avatar ? '' : 'bg-gradient-to-br from-[#7c6af7] to-indigo-600 text-white border-4 border-[#7c6af7]/30'">
+                    <template x-if="currentUser?.avatar"><img :src="currentUser.avatar" class="w-24 h-24 rounded-3xl object-cover border-4 border-[#7c6af7]/30 shadow-xl"></template>
+                    <template x-if="!currentUser?.avatar"><span x-text="currentUser?.username.slice(0,2).toUpperCase()"></span></template>
+                </div>
+                <div>
+                    <h3 class="font-display text-4xl font-bold tracking-tight" x-text="currentUser?.username"></h3>
+                    <p class="text-gray-500 font-mono text-xs tracking-widest uppercase mt-1">ArithmoQuest Elite Player</p>
+                    <button @click="selectedAvatar = currentUser.avatar; showAvatarModal = true" class="mt-4 bg-[#7c6af7]/20 hover:bg-[#7c6af7]/30 text-[#7c6af7] border border-[#7c6af7]/30 px-4 py-2 rounded-xl text-xs font-bold tracking-widest transition-all">EDIT PROFILE</button>
+                    <div class="flex gap-4 mt-6">
+                        <div class="bg-[#1c2230] border border-[#21262d] px-4 py-2 rounded-xl">
+                            <p class="text-[10px] text-gray-500 font-mono uppercase">Best Prize</p>
+                            <p class="font-bold text-[#f0b429]" x-text="currentUser?.bestScore || 0"></p>
+                        </div>
+                        <div class="bg-[#1c2230] border border-[#21262d] px-4 py-2 rounded-xl">
+                            <p class="text-[10px] text-gray-500 font-mono uppercase">Total Games</p>
+                            <p class="font-bold text-[#7c6af7]" x-text="currentUser?.history?.length || 0"></p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <section class="space-y-4">
+                    <div class="flex items-center gap-4">
+                        <h3 class="font-mono text-[10px] text-gray-500 uppercase tracking-[0.3em]">Difficulty Stats</h3>
+                        <div class="flex-1 h-px bg-[#21262d]"></div>
+                    </div>
+                    <div class="glass p-6 rounded-2xl space-y-6">
+                        <template x-for="diff in ['easy', 'medium', 'hard']" :key="diff">
+                            <div class="space-y-2">
+                                <div class="flex justify-between text-xs font-bold uppercase tracking-widest">
+                                    <span :class="diff === 'easy' ? 'text-green-400' : diff === 'medium' ? 'text-[#f0b429]' : 'text-red-400'" x-text="diff"></span>
+                                    <span class="text-gray-500" x-text="getDiffCount(diff) + ' games'"></span>
+                                </div>
+                                <div class="h-2 bg-[#21262d] rounded-full overflow-hidden">
+                                    <div class="h-full rounded-full transition-all duration-1000" :style="'width: ' + getDiffPercent(diff) + '%'" :class="diff === 'easy' ? 'bg-green-500' : diff === 'medium' ? 'bg-[#f0b429]' : 'bg-red-500'"></div>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+                </section>
+                <section class="space-y-4">
+                    <div class="flex items-center gap-4">
+                        <h3 class="font-mono text-[10px] text-gray-500 uppercase tracking-[0.3em]">Last Game</h3>
+                        <div class="flex-1 h-px bg-[#21262d]"></div>
+                    </div>
+                    <div class="glass p-6 rounded-2xl flex flex-col items-center justify-center h-[240px] text-center">
+                        <template x-if="currentUser?.history?.length">
+                            <div>
+                                <p class="text-gray-500 font-mono text-xs uppercase mb-2" x-text="currentUser.history[currentUser.history.length - 1].date"></p>
+                                <p class="text-4xl font-display font-bold text-[#f0b429] mb-1" x-text="'🏆 ' + currentUser.history[currentUser.history.length - 1].prize"></p>
+                                <p class="text-sm font-bold" x-text="'Round ' + currentUser.history[currentUser.history.length - 1].step"></p>
+                                <span class="mt-4 inline-block px-3 py-1 rounded-full bg-[#7c6af7]/10 text-[#7c6af7] border border-[#7c6af7]/20 text-[10px] font-bold uppercase tracking-widest" x-text="currentUser.history[currentUser.history.length - 1].difficulty"></span>
+                            </div>
+                        </template>
+                        <template x-if="!currentUser?.history?.length">
+                            <p class="text-gray-500 italic font-mono text-xs">No games played yet.</p>
+                        </template>
+                    </div>
+                </section>
+            </div>
+        </div>
+
+        <!-- ── LEADERBOARD PANEL ──────────────────────────────────── -->
+        <div x-show="panel === 'leaderboard'" x-transition class="space-y-6">
+            <header class="flex items-start justify-between gap-4">
+                <div>
+                    <h2 class="font-display text-3xl font-bold tracking-tight">Leaderboard</h2>
+                    <p class="text-gray-500 text-sm mt-1 flex items-center gap-2">
+                        <span x-show="!leaderboardLoading">Top players ranked by best prize — tap to view stats</span>
+                        <span x-show="leaderboardLoading" class="flex items-center gap-2">
+                            <svg class="animate-spin w-3 h-3 text-[#7c6af7]" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/></svg>
+                            Syncing scores...
+                        </span>
+                    </p>
+                </div>
+                <button @click="loadLeaderboard()" title="Refresh leaderboard"
+                        class="shrink-0 mt-1 p-2 rounded-xl text-gray-500 hover:text-[#7c6af7] hover:bg-[#7c6af7]/10 transition-all"
+                        :class="leaderboardLoading ? 'opacity-50 pointer-events-none' : ''">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+                </button>
+            </header>
+            <div class="space-y-3">
+                <template x-for="(u, index) in getLeaderboard()" :key="u.username">
+                    <div>
+                        <div @click="selectedPlayer = selectedPlayer?.username === u.username ? null : u; loadPlayerStats(u.username)"
+                             class="glass p-4 rounded-xl flex items-center justify-between cursor-pointer hover:border-[#7c6af7]/40 transition-all"
+                             :class="[index === 0 ? 'border-[#f0b429]/50 bg-[#f0b429]/5' : index === 1 ? 'border-gray-400/30' : index === 2 ? 'border-amber-700/30' : '', selectedPlayer?.username === u.username ? 'border-[#7c6af7]/60 bg-[#7c6af7]/5' : '']">
+                            <div class="flex items-center gap-3 sm:gap-6">
+                                <span class="font-mono font-bold text-xl w-8 text-center shrink-0" x-text="index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : '#' + (index + 1)"></span>
+                                <div class="flex items-center gap-3">
+                                    <div class="w-8 h-8 rounded-lg flex items-center justify-center font-bold text-xs shrink-0"
+                                         :class="u.avatar ? '' : 'bg-gradient-to-br from-[#7c6af7] to-indigo-600 text-white'">
+                                        <template x-if="u.avatar"><img :src="u.avatar" class="w-8 h-8 rounded-lg object-cover"></template>
+                                        <template x-if="!u.avatar"><span x-text="u.username.slice(0,2).toUpperCase()"></span></template>
+                                    </div>
+                                    <div>
+                                        <p class="font-bold text-sm" x-text="u.username"></p>
+                                        <p class="text-[10px] font-mono" :class="u.username === currentUser?.username ? 'text-[#7c6af7]'" x-text="u.username === currentUser?.username ? 'YOU' : ''"></p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="flex items-center gap-2 sm:gap-3">
+                                <p class="font-mono font-bold text-[#f0b429] text-base sm:text-lg" x-text="'🏆 ' + u.bestScore.toLocaleString()"></p>
+                                <svg :class="selectedPlayer?.username === u.username ? 'rotate-180' : ''" class="w-4 h-4 text-gray-500 transition-transform shrink-0" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+                            </div>
+                        </div>
+                        <div x-show="selectedPlayer?.username === u.username" x-transition class="mt-1 glass rounded-xl p-5 border-[#7c6af7]/20 bg-[#7c6af7]/3 space-y-4">
+                            <template x-if="playerStatsLoading">
+                                <p class="text-center text-gray-500 text-xs font-mono py-2">Loading stats...</p>
+                            </template>
+                            <template x-if="!playerStatsLoading && playerStats">
+                                <div>
+                                    <p class="text-xs text-gray-500 font-mono tracking-widest uppercase mb-3">Player Statistics</p>
+                                    <div class="grid grid-cols-3 gap-3 mb-4">
+                                        <div class="bg-[#0d1117] rounded-xl p-3 text-center">
+                                            <p class="text-[10px] text-gray-500 uppercase tracking-widest mb-1">Games</p>
+                                            <p class="font-mono font-bold text-lg text-white" x-text="playerStats.totalGames"></p>
+                                        </div>
+                                        <div class="bg-[#0d1117] rounded-xl p-3 text-center">
+                                            <p class="text-[10px] text-gray-500 uppercase tracking-widest mb-1">Best</p>
+                                            <p class="font-mono font-bold text-base text-[#f0b429]" x-text="playerStats.bestPrize.toLocaleString()"></p>
+                                        </div>
+                                        <div class="bg-[#0d1117] rounded-xl p-3 text-center">
+                                            <p class="text-[10px] text-gray-500 uppercase tracking-widest mb-1">Total</p>
+                                            <p class="font-mono font-bold text-base text-[#7c6af7]" x-text="playerStats.totalPrize.toLocaleString()"></p>
+                                        </div>
+                                    </div>
+                                    <div class="space-y-2">
+                                        <p class="text-[10px] text-gray-500 uppercase tracking-widest">Difficulty Breakdown</p>
+                                        <template x-for="diff in ['easy','medium','hard']" :key="diff">
+                                            <div class="flex items-center gap-3">
+                                                <span class="w-14 text-[10px] font-bold uppercase tracking-widest"
+                                                      :class="diff === 'easy' ? 'text-green-400' : diff === 'medium' ? 'text-[#f0b429]' : 'text-red-400'"
+                                                      x-text="diff"></span>
+                                                <div class="flex-1 h-2 bg-[#0d1117] rounded-full overflow-hidden">
+                                                    <div class="h-full rounded-full transition-all"
+                                                         :class="diff === 'easy' ? 'bg-green-500' : diff === 'medium' ? 'bg-[#f0b429]' : 'bg-red-500'"
+                                                         :style="'width:' + (playerStats.totalGames > 0 ? ((playerStats.diffCounts[diff]||0)/playerStats.totalGames*100) : 0) + '%'"></div>
+                                                </div>
+                                                <span class="text-xs font-mono text-gray-400 w-6 text-right" x-text="playerStats.diffCounts[diff] || 0"></span>
+                                            </div>
+                                        </template>
+                                    </div>
+                                    <div class="mt-3 flex items-center justify-between text-xs text-gray-500 font-mono">
+                                        <span>Fave: <span class="text-white font-bold" x-text="playerStats.faveMode"></span></span>
+                                        <span>Accuracy: <span class="text-[#7c6af7] font-bold" x-text="(playerStats.accuracy ?? 0) + '%'"></span></span>
+                                    </div>
+                                </div>
+                            </template>
+                        </div>
+                    </div>
+                </template>
+                <template x-if="getLeaderboard().length === 0">
+                    <p class="text-center text-gray-500 py-12 italic font-mono text-xs">No scores yet. Be the first to play!</p>
+                </template>
+            </div>
+        </div>
+
+        <!-- ── HISTORY PANEL ──────────────────────────────────────── -->
+        <div x-show="panel === 'history'" x-transition class="space-y-8">
+            <header>
+                <h2 class="font-display text-3xl font-bold tracking-tight">Game History</h2>
+                <p class="text-gray-500 text-sm mt-1">Your past sessions and performance</p>
+            </header>
+            <div class="space-y-3">
+                <template x-for="(h, i) in (currentUser?.history || []).slice().reverse()" :key="i">
+                    <div class="glass p-4 rounded-xl flex items-center justify-between">
+                        <div class="flex items-center gap-4">
+                            <span class="px-2 py-1 rounded-md text-[10px] font-bold tracking-widest uppercase border"
+                                  :class="h.difficulty === 'easy' ? 'bg-green-500/10 text-green-400 border-green-500/30' : h.difficulty === 'medium' ? 'bg-[#f0b429]/10 text-[#f0b429] border-[#f0b429]/30' : 'bg-red-500/10 text-red-400 border-red-500/30'"
+                                  x-text="h.difficulty"></span>
+                            <div>
+                                <p class="font-bold text-sm" x-text="'Round ' + h.step"></p>
+                                <p class="text-[10px] text-gray-500 font-mono" x-text="h.date"></p>
+                            </div>
+                        </div>
+                        <p class="font-mono font-bold text-[#f0b429]" x-text="'🏆 ' + h.prize"></p>
+                    </div>
+                </template>
+                <template x-if="!currentUser?.history?.length">
+                    <p class="text-center text-gray-500 py-12 italic font-mono text-xs">No history found.</p>
+                </template>
+            </div>
+        </div>
+
+        <!-- ── SETTINGS PANEL ─────────────────────────────────────── -->
+        <div x-show="panel === 'settings'" x-transition class="space-y-8">
+            <header>
+                <h2 class="font-display text-3xl font-bold tracking-tight">Settings</h2>
+                <p class="text-gray-500 text-sm mt-1">Audio and game preferences</p>
+            </header>
+            <div class="space-y-6 max-w-2xl">
+                <section class="space-y-4">
+                    <div class="flex items-center gap-4">
+                        <h3 class="font-mono text-[10px] text-gray-500 uppercase tracking-[0.3em]">Audio</h3>
+                        <div class="flex-1 h-px bg-[#21262d]"></div>
+                    </div>
+                    <div class="glass p-6 rounded-2xl space-y-6">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="font-bold">Background Music</p>
+                                <p class="text-xs text-gray-500">Play music during gameplay</p>
+                            </div>
+                            <button @click="toggleMusic()" class="w-12 h-6 rounded-full relative transition-all" :class="musicOn ? 'bg-[#7c6af7]' : 'bg-[#21262d]'">
+                                <div class="absolute top-1 w-4 h-4 bg-white rounded-full shadow-md transition-all" :style="musicOn ? 'left: 24px' : 'left: 4px'"></div>
+                            </button>
+                        </div>
+                        <div class="space-y-3">
+                            <div class="flex items-center justify-between text-xs font-mono text-gray-500">
+                                <div class="flex items-center gap-2">
+                                    <i :data-lucide="volume > 0 ? 'volume-2' : 'volume-x'" class="w-4 h-4"></i>
+                                    <span>Volume</span>
+                                </div>
+                                <span x-text="volume + '%'"></span>
+                            </div>
+                            <input type="range" min="0" max="100" x-model="volume" @input="setVolume()" class="w-full h-4 bg-[#21262d] rounded-full appearance-none cursor-pointer accent-[#7c6af7]">
+                        </div>
+                    </div>
+                </section>
+                <section class="space-y-4">
+                    <div class="flex items-center gap-4">
+                        <h3 class="font-mono text-[10px] text-gray-500 uppercase tracking-[0.3em]">Account</h3>
+                        <div class="flex-1 h-px bg-[#21262d]"></div>
+                    </div>
+                    <div class="glass p-6 rounded-2xl">
+                        <button @click="resetHistory()" class="text-red-400 text-sm font-bold hover:underline">Reset Game History</button>
+                    </div>
+                </section>
+            </div>
+        </div>
+
+        <!-- ── CREDITS PANEL ──────────────────────────────────────── -->
+        <div x-show="panel === 'credits'" x-transition class="space-y-8">
+            <header>
+                <h2 class="font-display text-3xl font-bold tracking-tight">Credits</h2>
+                <p class="text-gray-500 text-sm mt-1">The team behind ArithmoQuest</p>
+            </header>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <template x-for="c in creators" :key="c.name">
+                    <div class="glass p-4 rounded-xl flex items-center gap-4">
+                        <div class="w-10 h-10 rounded-lg bg-[#7c6af7]/10 flex items-center justify-center text-[#7c6af7] font-mono font-bold shrink-0" x-text="c.name.split(' ').map(n => n[0]).join('')"></div>
+                        <div>
+                            <p class="font-bold text-sm" x-text="c.name"></p>
+                            <p class="text-[10px] text-gray-500 font-mono uppercase tracking-wider" x-text="c.role"></p>
+                        </div>
+                    </div>
+                </template>
+            </div>
+            <p class="text-center text-gray-500 font-mono text-[10px] tracking-[0.2em] pt-8">ARITHMOQUEST © 2026 — ALL RIGHTS RESERVED</p>
+        </div>
+    </main>
+
+    <!-- MOBILE BOTTOM NAV (shown only on phones via CSS) -->
+    <nav class="mobile-bottom-nav">
+        <button @click="setPanel('home')"        :class="panel==='home'        ? 'active' : ''">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+            Home
+        </button>
+        <button @click="setPanel('profile')"     :class="panel==='profile'     ? 'active' : ''">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+            Profile
+        </button>
+        <button @click="setPanel('leaderboard')" :class="panel==='leaderboard' ? 'active' : ''">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/></svg>
+            Board
+        </button>
+        <button @click="setPanel('history')"     :class="panel==='history'     ? 'active' : ''">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            History
+        </button>
+        <button @click="setPanel('settings')"    :class="panel==='settings'    ? 'active' : ''">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+            More
+        </button>
+    </nav>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!-- GAME SCREEN                                                      -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<div x-show="screen === 'game' || screen === 'prize'"
+     x-cloak x-transition
+     class="fixed inset-0 z-[500] bg-[#0d1117]/75 flex flex-col overflow-hidden">
+
+    <!-- Top bar -->
+    <div class="game-topbar w-full px-4 py-3 flex justify-between items-center border-b border-white/10 bg-[#161b22] shrink-0 relative z-[600]">
+        <button type="button" @click="endGame('quit')"
+                class="text-gray-300 hover:text-white text-xs font-bold flex items-center gap-2 bg-white/10 px-4 py-2.5 rounded-xl border border-white/20 transition-all active:scale-95 cursor-pointer pointer-events-auto">
+            <i data-lucide="arrow-left" class="w-4 h-4 pointer-events-none"></i>
+            <span class="pointer-events-none">Back</span>
+        </button>
+        <div class="pointer-events-none">
+            <div class="bg-[#f0b429]/10 border border-[#f0b429]/30 px-4 py-2 rounded-xl font-mono text-sm text-[#f0b429] font-bold flex items-center gap-2 shadow-inner">
+                <span class="text-lg">🏆</span>
+                <span x-text="LADDER_STEPS[currentStep - 1].prize"></span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Game card -->
+    <div class="flex-1 flex flex-col items-center justify-center px-3 py-2 relative z-[550] overflow-hidden">
+        <div x-show="screen === 'game'"
+             class="game-card w-full max-w-lg glass p-4 rounded-3xl shadow-2xl relative"
+             :class="isWrong ? 'animate-shake' : ''">
+            <div class="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-transparent via-[#7c6af7] to-transparent opacity-50"></div>
+
+            <div class="text-center mb-3">
+                <p class="font-mono text-[10px] text-gray-500 uppercase tracking-[0.4em]" x-text="'ROUND ' + currentStep"></p>
+                <h3 class="font-display text-xs font-bold text-[#7c6af7] tracking-widest uppercase" x-text="difficulty + ' MODE'"></h3>
+            </div>
+
+            <div class="bg-[#1c2230] border-2 rounded-2xl p-4 mb-3 text-center transition-all shadow-2xl relative"
+                 :class="isCorrect ? 'border-green-500 bg-green-500/10 text-green-400' : isWrong ? 'border-red-500 bg-red-500/10 text-red-400' : 'border-[#21262d]'">
+                <div class="absolute top-2 right-2 px-2 py-1 rounded-lg font-mono flex items-center gap-1 border"
+                     :class="difficulty === 'hard' ? 'bg-red-500/20 border-red-500/40' : difficulty === 'medium' ? 'bg-[#f0b429]/20 border-[#f0b429]/40' : 'bg-green-500/20 border-green-500/40'">
+                    <span class="text-xs">⏱</span>
+                    <span class="text-xs font-bold"
+                          :class="timeLeft < 10 ? 'text-red-500 animate-pulse' : difficulty === 'hard' ? 'text-red-400' : difficulty === 'medium' ? 'text-[#f0b429]' : 'text-green-400'"
+                          x-text="timeLeft + 's'"></span>
+                </div>
+                <p class="sequence-text font-mono text-3xl md:text-4xl font-bold tracking-widest break-all"
+                   x-text="isCorrect ? '✓' : isWrong ? '✗' : displaySequence"></p>
+            </div>
+
+            <div class="text-center mb-3">
+                <p class="text-xs text-gray-500 font-mono mb-1 uppercase tracking-widest">Your Answer</p>
+                <div class="inline-flex bg-[#f0b429]/5 border border-[#f0b429]/20 px-6 py-2 rounded-xl min-w-[100px] min-h-[44px] items-center justify-center">
+                    <p class="font-mono text-2xl font-bold text-[#f0b429]" x-text="playerInput || '-'"></p>
+                </div>
+            </div>
+
+            <!-- Numpad — use touchstart so it fires instantly on mobile -->
+            <div class="grid grid-cols-3 gap-2">
+                <template x-for="val in [1, 2, 3, 4, 5, 6, 7, 8, 9, 'C', 0, 'OK']" :key="val">
+                    <button @touchstart.prevent="clickNumpad(val)"
+                            @mousedown.prevent="clickNumpad(val)"
+                            class="numpad-btn"
+                            :class="val === 'C' ? 'text-red-400' : val === 'OK' ? 'text-[#7c6af7] font-display tracking-widest text-lg' : 'text-white'"
+                            x-text="val"></button>
+                </template>
+            </div>
+        </div>
+    </div>
+
+    <!-- PRIZE MODAL -->
+    <div x-show="screen === 'prize'" x-cloak x-transition
+         class="fixed inset-0 z-[700] flex items-center justify-center p-4 bg-[#0d1117]/95 backdrop-blur-md">
+        <div class="prize-modal-inner w-full max-w-sm glass p-8 rounded-3xl shadow-2xl relative border-[#f0b429]/20">
+            <div class="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-transparent via-[#f0b429] to-transparent opacity-50"></div>
+            <h2 class="text-center font-display text-3xl font-bold mb-6 tracking-wider uppercase text-[#f0b429]">Prize Ladder</h2>
+            <div class="prize-ladder-list space-y-2 mb-8 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
+                <template x-for="step in LADDER_STEPS" :key="step.step">
+                    <div class="flex justify-between items-center p-3 rounded-xl border transition-all duration-300"
+                         :class="step.step === currentStep ? 'bg-green-500/20 border-green-500 text-green-400 scale-[1.02] shadow-lg shadow-green-500/20' : 'bg-[#1c2230] border-[#21262d] text-gray-500 opacity-50'">
+                        <div class="flex items-center gap-3">
+                            <span class="font-mono text-xs opacity-50" x-text="'R' + step.step"></span>
+                            <span class="font-bold text-[10px] tracking-widest" x-text="step.step === currentStep ? 'UNLOCKED' : ''"></span>
+                        </div>
+                        <span class="font-mono font-bold text-lg" x-text="'🏆 ' + step.prize"></span>
+                    </div>
+                </template>
+            </div>
+            <div class="space-y-3">
+                <button type="button" @click="nextRound()" class="w-full bg-[#7c6af7] hover:bg-[#9d8ff9] text-white py-4 rounded-xl font-display font-bold tracking-widest shadow-lg shadow-[#7c6af7]/30 transition-all active:scale-95 uppercase flex items-center justify-center gap-2">
+                    <span class="pointer-events-none">NEXT ROUND</span>
+                    <i data-lucide="arrow-right" class="w-4 h-4 pointer-events-none"></i>
+                </button>
+                <button type="button" @click="endGame('quit')" class="w-full py-4 rounded-xl bg-red-500/10 text-red-400 border border-red-500/20 hover:bg-red-500/20 transition-all font-display font-bold text-xs tracking-widest uppercase flex items-center justify-center gap-2 cursor-pointer">
+                    <i data-lucide="save" class="w-4 h-4 pointer-events-none"></i>
+                    <span class="pointer-events-none">SAVE & QUIT</span>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- AVATAR MODAL -->
+<div x-show="showAvatarModal" x-cloak class="fixed inset-0 bg-black/70 z-[9999] flex items-center justify-center p-4">
+    <div class="avatar-modal-inner glass p-8 rounded-3xl w-full max-w-md relative">
+        <h2 class="font-display text-2xl font-bold mb-6 text-center">Choose Your Avatar</h2>
+        <button @click="showAvatarModal = false" class="absolute top-4 right-4 text-gray-400 hover:text-white text-xl w-8 h-8 flex items-center justify-center">✕</button>
+        <div class="grid grid-cols-4 gap-3">
+            <template x-for="avatar in avatars" :key="avatar">
+                <img :src="avatar" @click="selectedAvatar = avatar"
+                     class="w-full aspect-square rounded-xl object-cover cursor-pointer border-2 transition-all"
+                     :class="selectedAvatar === avatar ? 'border-[#7c6af7] scale-105' : 'border-transparent hover:border-gray-500'">
+            </template>
+        </div>
+        <div class="flex gap-3 mt-6">
+            <button @click="showAvatarModal = false" class="flex-1 py-3 rounded-xl bg-[#1c2230] border border-[#21262d] hover:border-[#7c6af7] text-sm font-bold transition-all">BACK</button>
+            <button @click="saveAvatar()" class="flex-1 py-3 rounded-xl bg-[#7c6af7] hover:bg-[#9d8ff9] text-white font-bold tracking-widest transition-all">SAVE</button>
+        </div>
+    </div>
+</div>
+
+<!-- LOGOUT MODAL -->
+<div x-show="showLogoutModal" x-cloak x-transition class="fixed inset-0 bg-black/70 z-[9999] flex items-center justify-center p-4">
+    <div class="modal-inner glass p-8 rounded-3xl w-full max-w-sm relative text-center">
+        <div class="w-14 h-14 rounded-full bg-red-500/10 border border-red-500/20 flex items-center justify-center mx-auto mb-4">
+            <i data-lucide="log-out" class="w-6 h-6 text-red-400"></i>
+        </div>
+        <h2 class="font-display text-2xl font-bold mb-2 tracking-wide">Log Out?</h2>
+        <p class="text-gray-400 text-sm mb-8">Are you sure you want to log out?</p>
+        <div class="flex gap-3">
+            <button @click="showLogoutModal = false" class="flex-1 py-3 rounded-xl bg-[#1c2230] border border-[#21262d] hover:border-[#7c6af7] text-sm font-bold transition-all">CANCEL</button>
+            <button @click="logout()" class="flex-1 py-3 rounded-xl bg-red-500/20 hover:bg-red-500/30 text-red-400 border border-red-500/30 font-bold tracking-widest text-sm transition-all">LOG OUT</button>
+        </div>
+    </div>
+</div>
+
+<script src="script.js"></script>
+
+<script>
+(function () {
+    const audio = document.getElementById('bgMusic');
+    if (!audio) return;
+    audio.volume = 0.7;
+    function startMusic() { audio.play().catch(() => {}); }
+    startMusic();
+    const onInteract = () => {
+        startMusic();
+        document.removeEventListener('click',      onInteract);
+        document.removeEventListener('keydown',    onInteract);
+        document.removeEventListener('touchstart', onInteract);
+    };
+    document.addEventListener('click',      onInteract, { once: true });
+    document.addEventListener('keydown',    onInteract, { once: true });
+    document.addEventListener('touchstart', onInteract, { once: true });
+})();
+</script>
+
+</body>
+</html>
